@@ -126,6 +126,7 @@ typedef struct MNVGfragUniforms MNVGfragUniforms;
 @interface MNVGbuffers : NSObject {
  @public
   id<MTLCommandBuffer> commandBuffer;
+  id<CAMetalDrawable> drawable;
   BOOL isBusy;
   int image;
   id<MTLBuffer> viewSizeBuffer;
@@ -518,6 +519,13 @@ void mnvgDeleteFramebuffer(MNVGframebuffer* framebuffer) {
     nvgDeleteImage(framebuffer->ctx, framebuffer->image);
   }
   free(framebuffer);
+}
+
+void mnvgBeginFrame(NVGcontext* ctx, void* drawable, void* commandBuffer, float windowWidth, float windowHeight, float devicePixelRatio) {
+  nvgBeginFrame(ctx, windowWidth, windowHeight, devicePixelRatio);
+  MNVGcontext* mtl = (__bridge MNVGcontext*)nvgInternalParams(ctx)->userPtr;
+  mtl.buffers->drawable = (__bridge id<CAMetalDrawable>)(drawable);
+  mtl.buffers->commandBuffer = (__bridge id<MTLCommandBuffer>)(commandBuffer);
 }
 
 void mnvgClearWithColor(NVGcontext* ctx, NVGcolor color) {
@@ -1369,17 +1377,24 @@ error:
     return;
   }
 
-  id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+  BOOL reuseCommandBuffer = _buffers->commandBuffer != nil;
+  id<MTLCommandBuffer> commandBuffer = _buffers->commandBuffer;
+  if (commandBuffer == nil) {
+    commandBuffer = [_commandQueue commandBuffer];
+    _buffers->commandBuffer = commandBuffer;
+  }
   id<MTLTexture> colorTexture = nil;;
   vector_uint2 textureSize;
 
-  _buffers->commandBuffer = commandBuffer;
   __block MNVGbuffers* buffers = _buffers;
-  [commandBuffer enqueue];
+  if (!reuseCommandBuffer) {
+    [commandBuffer enqueue];
+  }
   __block dispatch_semaphore_t block_sema = _semaphore;
   [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
       buffers->isBusy = NO;
       buffers->commandBuffer = nil;
+      buffers->drawable = nil;
       buffers->image = 0;
       buffers->nindexes = 0;
       buffers->nverts = 0;
@@ -1401,9 +1416,12 @@ error:
   if (textureSize.x == 0 || textureSize.y == 0) return;
   [self updateStencilTextureToSize:&textureSize];
 
-  id<CAMetalDrawable> drawable = nil;
-  if (colorTexture == nil) {
+  id<CAMetalDrawable> drawable = buffers->drawable;
+  if (drawable == nil) {
     drawable = _metalLayer.nextDrawable;
+    buffers->drawable = drawable;
+  }
+  if (colorTexture == nil) {
     colorTexture = drawable.texture;
   }
   _renderEncoder = [self renderCommandEncoderWithColorTexture:colorTexture];
@@ -1425,7 +1443,7 @@ error:
 
   [_renderEncoder endEncoding];
   _renderEncoder = nil;
-  if (drawable) {
+  if (drawable && !reuseCommandBuffer) {
     [_buffers->commandBuffer presentDrawable:drawable];
   }
 
@@ -1439,7 +1457,9 @@ error:
   }
 #endif
 
-  [_buffers->commandBuffer commit];
+  if (!reuseCommandBuffer) {
+    [_buffers->commandBuffer commit];
+  }
 }
 
 - (int)renderGetTextureSizeForImage:(int)image

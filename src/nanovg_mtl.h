@@ -85,6 +85,9 @@ void mnvgDeleteFramebuffer(MNVGframebuffer* framebuffer);
 // Metal bridging functions
 //
 
+// Begin drawing a new frame
+void mnvgBeginFrame(NVGcontext* ctx, void* drawable, void* commandBuffer, float windowWidth, float windowHeight, float devicePixelRatio);
+
 // Clear context on next frame, must be called before nvgEndFrame
 void mnvgClearWithColor(NVGcontext* ctx, NVGcolor color);
 
