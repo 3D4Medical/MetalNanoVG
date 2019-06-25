@@ -1376,6 +1376,7 @@ error:
   _buffers->commandBuffer = commandBuffer;
   __block MNVGbuffers* buffers = _buffers;
   [commandBuffer enqueue];
+  __block dispatch_semaphore_t block_sema = _semaphore;
   [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> buffer) {
       buffers->isBusy = NO;
       buffers->commandBuffer = nil;
@@ -1384,7 +1385,7 @@ error:
       buffers->nverts = 0;
       buffers->ncalls = 0;
       buffers->nuniforms = 0;
-      dispatch_semaphore_signal(_semaphore);
+      dispatch_semaphore_signal(block_sema);
   }];
 
   if (s_framebuffer == NULL ||
