@@ -27,7 +27,7 @@
 # into metallib binary data as defined in "nanovg_mtl_metallib_*.h" headers.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd $DIR/../src
+cd "$DIR"/../src
 
 result=true
 
