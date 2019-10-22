@@ -131,6 +131,7 @@ typedef struct MNVGfragUniforms MNVGfragUniforms;
   int image;
   id<MTLBuffer> viewSizeBuffer;
   id<MTLTexture> stencilTexture;
+  id<MTLTexture> colorTexture;
   MNVGcall* calls;
   int ccalls;
   int ncalls;
@@ -496,6 +497,11 @@ void nvgDeleteMTL(NVGcontext* ctx) {
 
 void mnvgBindFramebuffer(MNVGframebuffer* framebuffer) {
   s_framebuffer = framebuffer;
+}
+
+void mnvgBindColorTexture(NVGcontext* ctx, id <MTLTexture> texture) {
+    MNVGcontext* mtl = (__bridge MNVGcontext*)nvgInternalParams(ctx)->userPtr;
+    mtl.buffers->colorTexture = texture;
 }
 
 MNVGframebuffer* mnvgCreateFramebuffer(NVGcontext* ctx, int width,
@@ -1229,6 +1235,7 @@ void mnvgReadPixels(NVGcontext* ctx, int image, int x, int y, int width,
     buffers->commandBuffer = nil;
     buffers->viewSizeBuffer = nil;
     buffers->stencilTexture = nil;
+    buffers->colorTexture = nil;
     buffers->indexBuffer = nil;
     buffers->vertBuffer = nil;
     buffers->uniformBuffer = nil;
@@ -1383,7 +1390,7 @@ error:
     commandBuffer = [_commandQueue commandBuffer];
     _buffers->commandBuffer = commandBuffer;
   }
-  id<MTLTexture> colorTexture = nil;;
+  id<MTLTexture> colorTexture = _buffers->colorTexture;
   vector_uint2 textureSize;
 
   __block MNVGbuffers* buffers = _buffers;

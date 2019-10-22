@@ -74,6 +74,9 @@ void nvgDeleteMTL(NVGcontext* ctx);
 // Binds the specified framebuffer as the current render pass.
 void mnvgBindFramebuffer(MNVGframebuffer* framebuffer);
 
+// Binds the specified texture as color texture to the context
+void mnvgBindColorTexture(NVGcontext* ctx, id <MTLTexture> texture);
+
 // Creates a new framebuffer.
 MNVGframebuffer* mnvgCreateFramebuffer(NVGcontext* ctx, int width,
                                        int height, int imageFlags);
