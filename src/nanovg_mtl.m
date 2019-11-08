@@ -1235,7 +1235,6 @@ void mnvgReadPixels(NVGcontext* ctx, int image, int x, int y, int width,
     buffers->commandBuffer = nil;
     buffers->viewSizeBuffer = nil;
     buffers->stencilTexture = nil;
-    buffers->colorTexture = nil;
     buffers->indexBuffer = nil;
     buffers->vertBuffer = nil;
     buffers->uniformBuffer = nil;
