@@ -1265,8 +1265,6 @@ void mnvgReadPixels(NVGcontext* ctx, int image, int x, int y, int width,
   _pseudoSampler = nil;
   _pseudoTexture = nil;
   _vertexDescriptor = nil;
-  _metalLayer.device = nil;
-  _metalLayer = nil;
 }
 
 - (int)renderDeleteTexture:(int)image {
