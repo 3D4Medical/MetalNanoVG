@@ -36,7 +36,7 @@
 
 #include "nanovg.h"
 
-#if TARGET_OS_IOS == 1
+#if TARGET_OS_IOS == 1 && TARGET_OS_SIMULATOR != 1
 #  include "mnvg_bitcode/ios_1_0.h"
 #  include "mnvg_bitcode/ios_1_1.h"
 #  include "mnvg_bitcode/ios_1_2.h"
@@ -49,7 +49,7 @@
 #  include "mnvg_bitcode/macos_1_2.h"
 #  include "mnvg_bitcode/macos_2_0.h"
 #  include "mnvg_bitcode/macos_2_1.h"
-#else
+#elif TARGET_OS_SIMULATOR != 1
 #  define MNVG_INVALID_TARGET
 #endif
 
@@ -437,10 +437,7 @@ static void mtlnvg__xformToMat3x3(matrix_float3x3* m3, float* t) {
 }
 
 NVGcontext* nvgCreateMTL(void* metalLayer, int flags) {
-#if TARGET_OS_SIMULATOR == 1
-  printf("Metal is not supported for iPhone Simulator.\n");
-  return NULL;
-#elif defined(MNVG_INVALID_TARGET)
+#if defined(MNVG_INVALID_TARGET)
   printf("Metal is only supported on iOS, macOS, and tvOS.\n");
   return NULL;
 #endif
@@ -466,7 +463,7 @@ NVGcontext* nvgCreateMTL(void* metalLayer, int flags) {
   params.edgeAntiAlias = flags & NVG_ANTIALIAS ? 1 : 0;
 
   mtl.flags = flags;
-#if TARGET_OS_OSX == 1
+#if TARGET_OS_OSX == 1 || TARGET_OS_SIMULATOR == 1
   mtl.fragSize = 256;
 #else
   mtl.fragSize = sizeof(MNVGfragUniforms);
@@ -936,11 +933,11 @@ void mnvgReadPixels(NVGcontext* ctx, int image, int x, int y, int width,
 #endif
 
   bool creates_pseudo_texture = false;
-  unsigned char* metal_library_bitcode;
-  unsigned int metal_library_bitcode_len;
+  unsigned char* metal_library_bitcode = NULL;
+  unsigned int metal_library_bitcode_len = 0;
   NSOperatingSystemVersion os_version = [[NSProcessInfo processInfo]
       operatingSystemVersion];
-#if TARGET_OS_IOS == 1
+#if TARGET_OS_IOS == 1 && TARGET_OS_SIMULATOR != 1
   if (os_version.majorVersion < 8) {
     return 0;
   } else if (os_version.majorVersion == 8) {
@@ -987,11 +984,16 @@ void mnvgReadPixels(NVGcontext* ctx, int image, int x, int y, int width,
   creates_pseudo_texture = true;
 #endif
 
-  dispatch_data_t data = dispatch_data_create(metal_library_bitcode,
-                                              metal_library_bitcode_len,
-                                              NULL,
-                                              DISPATCH_DATA_DESTRUCTOR_DEFAULT);
-  id<MTLLibrary> library = [device newLibraryWithData:data error:&error];
+  id<MTLLibrary> library = nil;
+  if (metal_library_bitcode_len > 0) {
+    dispatch_data_t data = dispatch_data_create(metal_library_bitcode,
+                                                metal_library_bitcode_len,
+                                                NULL,
+                                                DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+    library = [device newLibraryWithData:data error:&error];
+  } else {
+    library = [device newDefaultLibrary];
+  }
 
   [self checkError:error withMessage:"init library"];
   if (library == nil) {
@@ -1770,7 +1772,7 @@ error:
         width:size->x
         height:size->y
         mipmapped:NO];
-#if TARGET_OS_OSX == 1
+#if TARGET_OS_OSX == 1 || TARGET_OS_SIMULATOR == 1
     stencilTextureDescriptor.resourceOptions = MTLResourceStorageModePrivate;
 #endif
     stencilTextureDescriptor.usage = MTLTextureUsageRenderTarget;
